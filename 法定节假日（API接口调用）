@@ -49,3 +49,43 @@ JSONObject a = new DateUtil().request("20180101");
 来源：CSDN 
 原文：https://blog.csdn.net/qq_36836224/article/details/79067241 
 版权声明：本文为博主原创文章，转载请附上博文链接！
+
+
+/******************************************************************/
+判断日期是否为法定节假日的API接口与示例函数 
+需要判定某日期是否为法定节假日，由于国家的节假日每年都在变动，所以使用接口判定是必要的。可惜的是，这样的接口并不多，在此汇总三个：
+
+http://tool.bitefu.net/jiari/ 
+http://www.easybots.cn/holiday_api.net 
+https://www.juhe.cn/docs/api/id/177 —- 这个需要实名认证 
+前两个看起来是个人的，最后一个是聚合数据的万年历接口。
+在我的小项目中使用了前两个。感觉个人的搭建可能不会太稳定，但是聚合的api我看限制越来越多，每天只能进行100次调用。
+附送一段小项目中的代码，使用curl获取前两项接口和Thinkphp5的缓存机制，判断当前日期是否为节假日的函数。
+function isHoliday()
+{
+    $today = date('Ymd');
+
+    if (cache($today) !== false) {
+        return cache($today);
+    } else {
+        $api1 = juhecurl('http://tool.bitefu.net/jiari/?d='.$today);
+        if (is_numeric($api1)) {
+            cache($today, $api1, 86400);
+            return cache($today);
+        } else {
+            $api2 = json_decode(juhecurl('http://www.easybots.cn/api/holiday.php?d='.$today));
+            if (is_numeric($api2)) {
+                cache($today, $api2->$today, 86400);
+                return cache($today);
+            } else {
+                return -1;
+            }
+        }
+    }
+}
+以上代码中cache()缓存助手函数是thinkphp5自带，juhecurl()是一段curl访问函数，仅供参考，不能直接转移到其他项目中。
+由于两个接口的返回结果是较为统一的，工作日为0，休息日1，节假日2。所以没有做详细判断，都取不到结果则返回-1。
+由于两个接口都不像太规范，建议在使用的时候，先看一下是否还可用。如果能考虑一定预算的话，推荐使用聚合接口稳定点。
+
+
+/********************************************************************************/
