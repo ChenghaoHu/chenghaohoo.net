@@ -89,3 +89,72 @@ function isHoliday()
 
 
 /********************************************************************************/
+获取指定日期的节假日信息
+1、接口地址：http://api.goseek.cn/Tools/holiday?date=数字日期，支持https协议。 
+2、返回数据：工作日对应结果为 0, 休息日对应结果为 1, 节假日对应的结果为 2 
+3、节假日数据说明：本接口包含2017年起的中国法定节假日数据，数据来源国务院发布的公告，每年更新1次，确保数据最新 
+4、示例： http://api.goseek.cn/Tools/holiday?date=20180501
+java调用：
+    业务需求：我需要提前2周检查节假日，如果有节假日，就每个user都生成一张节日券，且相同节日只能发一张
+// 节日券
+public void addCouponToAllUser() {
+    List<String> valueList = new ArrayList<>();
+    List<String> dayList = new ArrayList<>();
+    for(int i=0; i<14; i++) {
+    	BufferedReader in = null;
+        StringBuffer sb = new StringBuffer();
+    	try{
+            // 提前14天判断节假日
+	    SimpleDateFormat sdf=new SimpleDateFormat("yyyyMMdd");  
+	    SimpleDateFormat sdf2=new SimpleDateFormat("yyyy-MM-dd");
+	    Date date=new Date();  
+            Calendar calendar = Calendar.getInstance();  
+            calendar.setTime(date);  
+	    calendar.add(Calendar.DAY_OF_MONTH, + i);  
+	    String after14 = sdf.format(calendar.getTime());  
+	    String dayForTest = sdf2.format(calendar.getTime()); 
+	    URL url = new URL("http://api.goseek.cn/Tools/holiday?date="+after14);
+            in = new BufferedReader(new InputStreamReader(url.openStream(),"utf-8"));
+            String str = null;
+            while((str = in.readLine()) != null) {
+                sb.append( str );
+            }
+            //json串转化为json对象
+            JSONObject json =  JSONObject.fromString(sb.toString());
+            String value = json.get("data").toString();
+            valueList.add(value);
+            if (value.equals("2")) {
+		dayList.add(dayForTest);
+	    }
+        } catch (Exception ex) {
+        } finally{
+            try{
+                if(in!=null) {
+                    in.close();
+                }
+            }catch(IOException ex) {
+            }
+        }
+    }
+    if (dayList.size() > 0) {
+        List<Integer> idList = dhyxxDao.queryId();
+	for (Integer userId : idList) {
+	    // 判断用户是否已经拥有相同节日券
+	    List<Integer> rows = dcouponsDao.queryHaveHoliday(userId, "节日券", dayList.get(0), dayList.get(dayList.size()-1));
+	    if (rows.size() > 0) {
+	        return;
+	    }
+	    dcouponsDao.addCouponToAllUser(userId,"满1500减450",450,"节日券",dayList.get(0),dayList.get(dayList.size()-1),true,false,false);
+        }
+    }
+
+--------------------- 
+作者：imHanweihu 
+来源：CSDN 
+原文：https://blog.csdn.net/imHanweihu/article/details/80661906 
+版权声明：本文为博主原创文章，转载请附上博文链接！
+
+
+
+/*******************************************************************/
+
